@@ -1,8 +1,8 @@
 *~
 *.un~
-*.jar
 *.pyc
 *.sw*
+libs/*.jar
 build
 build/*
 docs/*/output
