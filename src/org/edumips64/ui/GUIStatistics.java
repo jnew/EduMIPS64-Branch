@@ -171,7 +171,7 @@ public class GUIStatistics extends GUIComponent {
         label.setText(" 0 " + CurrentLocale.getString("BTS"));
         return label;
       case 11://NUMBER OF BRANCH MISPREDICTION STALLS GOES HERE INSTEAD OF THE 0
-        label.setText(branchStalls + CurrentLocale.getString("BMS"));
+        label.setText(" " + branchStalls + " " + CurrentLocale.getString("BMS"));
         return label;
       case 12:
         label.setText(" " + CurrentLocale.getString("CSIZE"));
