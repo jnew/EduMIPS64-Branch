@@ -648,7 +648,7 @@ public abstract class Instruction {
    * Now it is used in order to generate the Dinero trace-file
    *</pre>
    */
-  public void IF() throws BreakException {}
+  public void IF() throws IrregularStringOfBitsException, IrregularWriteOperationException, TwosComplementSumException, BreakException {}
 
   /**
    * <pre>
@@ -665,7 +665,7 @@ public abstract class Instruction {
    * </pre>
    **/
 
-  public abstract void EX() throws HaltException, IrregularStringOfBitsException, IntegerOverflowException, TwosComplementSumException, IrregularWriteOperationException, DivisionByZeroException, NotAlignException, FPInvalidOperationException, FPUnderflowException, FPOverflowException, FPDivideByZeroException, AddressErrorException, JumpException;
+  public abstract void EX() throws HaltException, IrregularStringOfBitsException, IntegerOverflowException, TwosComplementSumException, IrregularWriteOperationException, DivisionByZeroException, NotAlignException, FPInvalidOperationException, FPUnderflowException, FPOverflowException, FPDivideByZeroException, AddressErrorException, JumpException, BranchMispredictionException;
 
   /**
    * <pre>

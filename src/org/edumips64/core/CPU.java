@@ -90,7 +90,7 @@ public class CPU {
   private static CPU cpu;
 
   /** Statistics */
-  private int cycles, instructions, RAWStalls, WAWStalls, dividerStalls, funcUnitStalls, memoryStalls, exStalls;
+  private int cycles, instructions, RAWStalls, WAWStalls, dividerStalls, funcUnitStalls, memoryStalls, exStalls, branchMispredictionStalls;
 
   /** Static initializer */
   static {
@@ -394,6 +394,10 @@ public class CPU {
     return memoryStalls;
   }
 
+  public int getBranchMispredictionStalls() {
+    return branchMispredictionStalls;
+  }
+
   /** This method performs a single pipeline step
   */
   public void step() throws AddressErrorException, HaltException, IrregularWriteOperationException, StoppedCPUException, MemoryElementNotFoundException, IrregularStringOfBitsException, TwosComplementSumException, SynchronousException, BreakException, NotAlignException, WAWException, MemoryNotAvailableException, FPDividerNotAvailableException, FPFunctionalUnitNotAvailableException {
@@ -656,6 +660,29 @@ public class CPU {
       // A J-Type instruction has just modified the Program Counter. We need to
       // put in the IF state the instruction the PC points to
       pipe.put(PipeStatus.IF, mem.getInstruction(pc));
+      pipe.put(PipeStatus.EX, pipe.get(PipeStatus.ID));
+      pipe.put(PipeStatus.ID, Instruction.buildInstruction("BUBBLE"));
+      old_pc.writeDoubleWord((pc.getValue()));
+      pc.writeDoubleWord((pc.getValue()) + 4);
+
+      if (syncex != null) {
+        throw new SynchronousException(syncex);
+      }
+
+    } catch (BranchMispredictionException ex) {
+      try {
+        if (pipe.get(PipeStatus.IF) != null) {
+          pipe.get(PipeStatus.IF).IF();
+        }
+      } catch (BreakException bex) {
+        logger.info("Caught a BREAK after a Jump: ignoring it.");
+      }
+
+      branchMispredictionStalls = branchMispredictionStalls + 2;
+
+      // A J-Type instruction has just modified the Program Counter. We need to
+      // put in the IF state the instruction the PC points to
+      pipe.put(PipeStatus.IF, mem.getInstruction(pc));
       pipe.put(PipeStatus.EX, Instruction.buildInstruction("BUBBLE"));
       pipe.put(PipeStatus.ID, Instruction.buildInstruction("BUBBLE"));
       old_pc.writeDoubleWord((pc.getValue()));
@@ -745,6 +772,7 @@ public class CPU {
     funcUnitStalls = 0;
     exStalls = 0;
     memoryStalls = 0;
+    branchMispredictionStalls = 0;
 
     // Reset registers.
     for (int i = 0; i < 32; i++) {

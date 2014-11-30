@@ -36,12 +36,42 @@ import org.edumips64.utils.*;
 public class BNEZ extends FlowControl_IType {
   public String OPCODE_VALUE = "000111";
   protected final int OFFSET_FIELD = 1;
+  private static final boolean PREDICT_TRUE = true;
+  private String IF_PC_VALUE = "";
 
   /** Creates a new instance of BEQZ */
   public BNEZ() {
     super.OPCODE_VALUE = OPCODE_VALUE;
     syntax = "%R,%B";
     name = "BNEZ";
+  }
+
+  public void IF() throws IrregularStringOfBitsException, IrregularWriteOperationException, TwosComplementSumException {
+    Dinero din = Dinero.getInstance();
+
+    try {
+      din.IF(Converter.binToHex(Converter.intToBin(64, cpu.getLastPC().getValue())));
+    } catch (IrregularStringOfBitsException e) {
+      e.printStackTrace();
+    }
+
+    Register pc = cpu.getPC();
+    IF_PC_VALUE = pc.getBinString();
+
+    if(PREDICT_TRUE) {
+      //TESTING PREDICT TRUE BRANCHING
+      //converting offset into a signed binary value of 64 bits in length
+      BitSet64 bs = new BitSet64();
+      bs.writeHalf(params.get(OFFSET_FIELD));
+      String offset = bs.getBinString();
+    
+      String pc_new = "";
+      String pc_current = cpu.getPC().getBinString();
+
+      //updating program counter
+      pc_new = InstructionsUtils.twosComplementSum(pc_current, offset);
+      pc.setBits(pc_new, 0);
+    }
   }
 
   public void ID() throws RAWException, IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException {
@@ -52,7 +82,7 @@ public class BNEZ extends FlowControl_IType {
   }
 
   public void EX()
-  throws IrregularStringOfBitsException, IntegerOverflowException, IrregularWriteOperationException, JumpException, TwosComplementSumException {
+  throws IrregularStringOfBitsException, IntegerOverflowException, IrregularWriteOperationException, JumpException, TwosComplementSumException, BranchMispredictionException {
     //getting registers rs and rt
     //if (cpu.getRegister(params.get(RS_FIELD)).getWriteSemaphore() > 0) {
       //throw new RAWException();
@@ -66,21 +96,25 @@ public class BNEZ extends FlowControl_IType {
     String offset = bs.getBinString();
     boolean condition = ! rs.equals(zero);
 
-    if (condition) {
-      String pc_new = "";
+    if(PREDICT_TRUE) {
+    if (!condition) {
       Register pc = cpu.getPC();
-      String pc_old = cpu.getPC().getBinString();
-
-      //subtracting 8 to the pc_old temporary variable using bitset64 safe methods, this gives us the PC when this was in IF
-      BitSet64 bs_temp = new BitSet64();
-      bs_temp.writeDoubleWord(-8);
-      pc_old = InstructionsUtils.twosComplementSum(pc_old, bs_temp.getBinString());
 
       //updating program counter
-      pc_new = InstructionsUtils.twosComplementSum(pc_old, offset);
-      pc.setBits(pc_new, 0);
+      pc.setBits(IF_PC_VALUE, 0);
 
-      throw new JumpException();
+      throw new BranchMispredictionException();
+    }
+    }
+    else {
+    if (condition) {
+      Register pc = cpu.getPC();
+
+      //updating program counter
+      pc.setBits(IF_PC_VALUE, 0);
+
+      throw new BranchMispredictionException();
+    }
     }
   }
   public void pack() throws IrregularStringOfBitsException {

@@ -35,7 +35,7 @@ import org.edumips64.utils.*;
  */
 public abstract class FlowControlInstructions extends Instruction {
   protected static CPU cpu = CPU.getInstance();
-  public void IF() {
+  public void IF() throws IrregularStringOfBitsException, IrregularWriteOperationException, TwosComplementSumException {
     Dinero din = Dinero.getInstance();
 
     try {
@@ -44,8 +44,9 @@ public abstract class FlowControlInstructions extends Instruction {
       e.printStackTrace();
     }
   }
+
   public abstract void ID() throws RAWException, IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException;
-  public abstract void EX() throws IrregularStringOfBitsException, IntegerOverflowException, IrregularWriteOperationException, JumpException, TwosComplementSumException;
+  public abstract void EX() throws IrregularStringOfBitsException, IntegerOverflowException, IrregularWriteOperationException, JumpException, TwosComplementSumException, BranchMispredictionException;
   public abstract void MEM() throws IrregularStringOfBitsException, MemoryElementNotFoundException;
   public abstract void WB() throws IrregularStringOfBitsException;
   public abstract void pack() throws IrregularStringOfBitsException;
