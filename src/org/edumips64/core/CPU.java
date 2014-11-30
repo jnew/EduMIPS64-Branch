@@ -54,7 +54,10 @@ public class CPU {
   public enum PipeStatus {IF, ID, EX, MEM, WB}
 
   /** Branch Predictor */
-  public int[] saturating_predictor_2bit;
+  public int[] saturating_predictor;
+  private int PREDICTOR_ENTRIES;
+  private int PREDICTOR_BITWIDTH;
+  private int PREDICTOR_TRUE_THRESH, PREDICTOR_FALSE_THRESH;
 
   /** CPU status.
    *  READY - the CPU has been initialized but the symbol table hasn't been
@@ -150,7 +153,9 @@ public class CPU {
     terminatingInstructionsOPCodes = conf.getTerminatingInstructions();
 
     //Branch Predictor init
-    saturating_predictor_2bit = new int[4096];
+    PREDICTOR_ENTRIES = 4096;
+    PREDICTOR_BITWIDTH = 2;
+    saturating_predictor = new int[PREDICTOR_ENTRIES];
 
     logger.info("CPU Created.");
   }
@@ -405,7 +410,7 @@ public class CPU {
   }
 
   public boolean getSaturatingBranchPrediction(int address) {
-   if(saturating_predictor_2bit[address] < 2) { // predict not taken
+   if(saturating_predictor[address] < (Math.pow(2, PREDICTOR_BITWIDTH)/2)) { // predict not taken
         return false;
    } else { // predict taken
         return true;
@@ -413,10 +418,10 @@ public class CPU {
   }
 
   public void updateSaturatingBranchPredictor(int address, boolean branchTaken) {
-    if(branchTaken && (saturating_predictor_2bit[address] < 3))
-      saturating_predictor_2bit[address]++;
-    else if((!branchTaken) && (saturating_predictor_2bit[address] > 0))
-      saturating_predictor_2bit[address]--;
+    if(branchTaken && (saturating_predictor[address] < (Math.pow(2, PREDICTOR_BITWIDTH)-1)))
+      saturating_predictor[address]++;
+    else if((!branchTaken) && (saturating_predictor[address] > 0))
+      saturating_predictor[address]--;
   }
 
   /** This method performs a single pipeline step
@@ -700,6 +705,7 @@ public class CPU {
       }
 
       branchMispredictionStalls = branchMispredictionStalls + 2;
+      logger.info("BranchMisprediction stalls incremented to " + RAWStalls);
 
       // A J-Type instruction has just modified the Program Counter. We need to
       // put in the IF state the instruction the PC points to
@@ -806,8 +812,8 @@ public class CPU {
     }
 
     // Reset branch predictor
-    for(int i = 0; i < 4096; i++)
-      saturating_predictor_2bit[i] = 0;
+    for(int i = 0; i < PREDICTOR_ENTRIES; i++)
+      saturating_predictor[i] = 0;
 
     try {
       // Reset the FCSR condition codes.
