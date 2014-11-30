@@ -1,0 +1,21 @@
+---
+env:
+  global:
+  - secure: |-
+      IzTN2uuR4nsJ8+1IRmLXxn29+MK8PuKYgArbAU/aQPPm1vIUdMv0AYF/rq9N
+      YBdJJqfUHwOcGBFuwX1oKp4ykb6VTdYGOOCAN0j3IWtDXMkFM+qSTsLishyw
+      wSR11Z5SzTPxMGrY8cOupSH8mckmJvecomcYLctZdYwiP72+rSs=
+notifications:
+  irc:
+    channels:
+    - irc.freenode.org#edumips64
+    skip_join: true
+language: java
+python:
+- "2.7"
+install: "sudo pip install Sphinx==1.1.3 --use-mirrors"
+jdk:
+- oraclejdk8
+- oraclejdk7
+- openjdk7
+after_success: ./utils/update-gh-pages.sh
