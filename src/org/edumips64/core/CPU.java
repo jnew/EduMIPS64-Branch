@@ -53,6 +53,9 @@ public class CPU {
   /** Pipeline status*/
   public enum PipeStatus {IF, ID, EX, MEM, WB}
 
+  /** Branch Predictor */
+  public int[] saturating_predictor_2bit;
+
   /** CPU status.
    *  READY - the CPU has been initialized but the symbol table hasn't been
    *  already filled by the Parser. This means that you can't call the step()
@@ -145,6 +148,9 @@ public class CPU {
     FPUConfigurator conf = new FPUConfigurator();
     knownFPInstructions = conf.getFPArithmeticInstructions();
     terminatingInstructionsOPCodes = conf.getTerminatingInstructions();
+
+    //Branch Predictor init
+    saturating_predictor_2bit = new int[4096];
 
     logger.info("CPU Created.");
   }
@@ -396,6 +402,21 @@ public class CPU {
 
   public int getBranchMispredictionStalls() {
     return branchMispredictionStalls;
+  }
+
+  public boolean getSaturatingBranchPrediction(int address) {
+   if(saturating_predictor_2bit[address] < 2) { // predict not taken
+        return false;
+   } else { // predict taken
+        return true;
+   }
+  }
+
+  public void updateSaturatingBranchPredictor(int address, boolean branchTaken) {
+    if(branchTaken && (saturating_predictor_2bit[address] < 3))
+      saturating_predictor_2bit[address]++;
+    else if((!branchTaken) && (saturating_predictor_2bit[address] > 0))
+      saturating_predictor_2bit[address]--;
   }
 
   /** This method performs a single pipeline step
@@ -784,6 +805,9 @@ public class CPU {
       fpr[i].reset();
     }
 
+    // Reset branch predictor
+    for(int i = 0; i < 4096; i++)
+      saturating_predictor_2bit[i] = 0;
 
     try {
       // Reset the FCSR condition codes.

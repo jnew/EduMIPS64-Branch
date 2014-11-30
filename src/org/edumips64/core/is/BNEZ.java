@@ -36,8 +36,10 @@ import org.edumips64.utils.*;
 public class BNEZ extends FlowControl_IType {
   public String OPCODE_VALUE = "000111";
   protected final int OFFSET_FIELD = 1;
-  private static final boolean PREDICT_TRUE = true;
+  private String PREDICTION_SCHEME = "2-Bit Saturating";
+  private boolean PREDICTION = false;
   private String IF_PC_VALUE = "";
+  private int PREDICTOR_ADDRESS = 0;
 
   /** Creates a new instance of BEQZ */
   public BNEZ() {
@@ -58,7 +60,18 @@ public class BNEZ extends FlowControl_IType {
     Register pc = cpu.getPC();
     IF_PC_VALUE = pc.getBinString();
 
-    if(PREDICT_TRUE) {
+    if(PREDICTION_SCHEME == "Always True") {
+      PREDICTION = true;
+    } else if(PREDICTION_SCHEME == "2-Bit Saturating") { // need 12 least sig bits of PC
+      PREDICTOR_ADDRESS = 0;
+      for(int i = 0; i < 12; i++) {
+        if(IF_PC_VALUE.charAt(i) == '1')
+          PREDICTOR_ADDRESS += Math.pow(2, i);
+      }
+      PREDICTION = cpu.getSaturatingBranchPrediction(PREDICTOR_ADDRESS);
+    } else { PREDICTION = false; }
+
+    if(PREDICTION == true) {
       //TESTING PREDICT TRUE BRANCHING
       //converting offset into a signed binary value of 64 bits in length
       BitSet64 bs = new BitSet64();
@@ -66,10 +79,9 @@ public class BNEZ extends FlowControl_IType {
       String offset = bs.getBinString();
     
       String pc_new = "";
-      String pc_current = cpu.getPC().getBinString();
 
       //updating program counter
-      pc_new = InstructionsUtils.twosComplementSum(pc_current, offset);
+      pc_new = InstructionsUtils.twosComplementSum(IF_PC_VALUE, offset);
       pc.setBits(pc_new, 0);
     }
   }
@@ -96,23 +108,27 @@ public class BNEZ extends FlowControl_IType {
     String offset = bs.getBinString();
     boolean condition = ! rs.equals(zero);
 
-    if(PREDICT_TRUE) {
+    if(PREDICTION_SCHEME == "2-Bit Saturating")
+      cpu.updateSaturatingBranchPredictor(PREDICTOR_ADDRESS, condition);
+
+    if(PREDICTION == true) { // always predict true
     if (!condition) {
       Register pc = cpu.getPC();
 
-      //updating program counter
+      //updating program counter to branch fallthrough
       pc.setBits(IF_PC_VALUE, 0);
 
       throw new BranchMispredictionException();
     }
-    }
-    else {
+    } else if(PREDICTION == false) { // always predict false
     if (condition) {
       Register pc = cpu.getPC();
+      String pc_new = "";
 
-      //updating program counter
-      pc.setBits(IF_PC_VALUE, 0);
-
+      //updating program counter to branch location
+      
+      pc_new = InstructionsUtils.twosComplementSum(IF_PC_VALUE, offset);
+      pc.setBits(pc_new, 0);
       throw new BranchMispredictionException();
     }
     }

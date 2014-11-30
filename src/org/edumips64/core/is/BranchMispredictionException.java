@@ -1,5 +1,5 @@
 /*
- * JumpException.java
+ * BranchMispredictionException.java
  *
  *  20th may 2006
  * Exception for the MIPS64 Instruction Set
