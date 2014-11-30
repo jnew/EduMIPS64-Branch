@@ -39,7 +39,7 @@ public class GUIStatistics extends GUIComponent {
 
   StatPanel statPanel;
   JScrollPane jsp;
-  private int nCycles, nInstructions, rawStalls, codeSize, WAWStalls, dividerStalls, memoryStalls;
+  private int nCycles, nInstructions, rawStalls, codeSize, WAWStalls, dividerStalls, memoryStalls, branchStalls;
   private float cpi;
 
   public GUIStatistics() {
@@ -88,6 +88,7 @@ public class GUIStatistics extends GUIComponent {
     WAWStalls = cpu.getWAWStalls();
     dividerStalls = cpu.getStructuralStallsDivider();
     memoryStalls = cpu.getStructuralStallsMemory();
+    branchStalls = cpu.getBranchMispredictionStalls();
   }
 
   public void draw() {
@@ -169,8 +170,8 @@ public class GUIStatistics extends GUIComponent {
       case 10:
         label.setText(" 0 " + CurrentLocale.getString("BTS"));
         return label;
-      case 11:
-        label.setText(" 0 " + CurrentLocale.getString("BMS"));
+      case 11://NUMBER OF BRANCH MISPREDICTION STALLS GOES HERE INSTEAD OF THE 0
+        label.setText(branchStalls + CurrentLocale.getString("BMS"));
         return label;
       case 12:
         label.setText(" " + CurrentLocale.getString("CSIZE"));

@@ -110,6 +110,9 @@ public class GUIConfig extends JDialog {
     int row = 2;
 
     addRow(panel, row++, "forwarding", new JCheckBox());
+    addRow(panel, row++, "branch_prediction", new JCheckBox());
+    addRow(panel, row++, "bits_per_entry", new JNumberField());
+    addRow(panel, row++, "number_of_entries", new JNumberField());
     addRow(panel, row++, "n_step", new JNumberField());
 
     // fill remaining vertical space
