@@ -47,6 +47,9 @@ public class ConfigManager {
     defaults.put("n_step", 4);
     defaults.put("sleep_interval", 10);
     defaults.put("show_aliases", false);
+    defaults.put("branch_prediction", false);
+    defaults.put("bits_per_entry", 0);
+    defaults.put("number_of_entries", 0);
 
     // FPU exceptions defaults.
     defaults.put("INVALID_OPERATION", true);
