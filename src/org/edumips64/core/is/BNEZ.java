@@ -36,10 +36,8 @@ import org.edumips64.utils.*;
 public class BNEZ extends FlowControl_IType {
   public String OPCODE_VALUE = "000111";
   protected final int OFFSET_FIELD = 1;
-  private String PREDICTION_SCHEME = "2-Bit Saturating";
   private boolean PREDICTION = false;
   private String IF_PC_VALUE = "";
-  private int PREDICTOR_ADDRESS = 0;
 
   /** Creates a new instance of BEQZ */
   public BNEZ() {
@@ -65,7 +63,6 @@ public class BNEZ extends FlowControl_IType {
     } else { PREDICTION = false; }
 
     if(PREDICTION == true) {
-      //TESTING PREDICT TRUE BRANCHING
       //converting offset into a signed binary value of 64 bits in length
       BitSet64 bs = new BitSet64();
       bs.writeHalf(params.get(OFFSET_FIELD));
@@ -75,7 +72,8 @@ public class BNEZ extends FlowControl_IType {
 
       //updating program counter
       pc_new = InstructionsUtils.twosComplementSum(IF_PC_VALUE, offset);
-      pc.setBits(pc_new, 0);
+      if(!cpu.getAlreadyJumped())
+        pc.setBits(pc_new, 0);
     }
   }
 

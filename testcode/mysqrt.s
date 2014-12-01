@@ -97,14 +97,14 @@ sqrt:	DADD R15, R31, R0	; R15 = R31
 	DADD R20, R0, R0	; R20 = 0 (valore di ritorno)
 	DADD R28, R20, R0	; primo parametro per prodotto 
 	DADD R29, R20, R0	; secondo parametro per prodotto 
-	jal prod		;chiamata prodotto, risultato in R30	
+	JAL prod		;chiamata prodotto, risultato in R30	
 sqrtw: 	SLT R25, R30, R19	; R25 = R30 < R19 (ovvero prodotto < x)
 	BEQZ R25,check 		; se R30 >= R19, fine del while
 	DADDI R20, R20, 1	;incrementiamo r
 	DADD R28, R20, R0	; primo parametro per prodotto 
 	DADD R29, R20, R0	; secondo parametro per prodotto 
-	jal prod		; chiamata a prodotto
-	j sqrtw			; ritorno in testa al while
+	JAL prod		; chiamata a prodotto
+	J sqrtw			; ritorno in testa al while
 check:	BEQ R30, R19, found	; se R30 == R19, allora abbiamo trovato la radice
 	J nofound		;altrimenti non abbiamo trovato la radice 
 found:	DADD R31, R15, R0	;ripristiniamo il registro R31 di salto
