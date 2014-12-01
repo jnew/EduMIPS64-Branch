@@ -2,7 +2,7 @@
 *.un~
 *.pyc
 *.sw*
-libs/*.jar
+*.jar
 build
 build/*
 docs/*/output

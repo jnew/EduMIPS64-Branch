@@ -38,6 +38,8 @@ import org.edumips64.utils.*;
 public class BEQZ extends FlowControl_IType {
   protected final static int OFFSET_FIELD = 1;
   public String OPCODE_VALUE = "000110";
+  private boolean PREDICTION = false;
+  private String IF_PC_VALUE = "";
 
   /** Creates a new instance of BEQZ */
   public BEQZ() {
@@ -46,12 +48,50 @@ public class BEQZ extends FlowControl_IType {
     name = "BEQZ";
   }
 
-  public void ID()
-  throws RAWException, IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException {
+  public void IF() throws IrregularStringOfBitsException, IrregularWriteOperationException, TwosComplementSumException {
+    Dinero din = Dinero.getInstance();
+
+    try {
+      din.IF(Converter.binToHex(Converter.intToBin(64, cpu.getLastPC().getValue())));
+    } catch (IrregularStringOfBitsException e) {
+      e.printStackTrace();
+    }
+
+    Register pc = cpu.getPC();
+    IF_PC_VALUE = pc.getBinString();
+
+    if(cpu.getPredictingBranches()) { // need 12 least sig bits of PC
+      PREDICTION = cpu.getSaturatingBranchPrediction(IF_PC_VALUE);
+    } else { PREDICTION = false; }
+
+    if(PREDICTION == true) {
+      //converting offset into a signed binary value of 64 bits in length
+      BitSet64 bs = new BitSet64();
+      bs.writeHalf(params.get(OFFSET_FIELD));
+      String offset = bs.getBinString();
+    
+      String pc_new = "";
+
+      //updating program counter
+      pc_new = InstructionsUtils.twosComplementSum(IF_PC_VALUE, offset);
+      if(!cpu.getAlreadyJumped())
+        pc.setBits(pc_new, 0);
+    }
+  }
+
+  public void ID() throws RAWException, IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException {
     //getting registers rs and rt
     if (cpu.getRegister(params.get(RS_FIELD)).getWriteSemaphore() > 0) {
       throw new RAWException();
     }
+  }
+
+  public void EX()
+  throws BranchMispredictionException, IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException {
+    //getting registers rs and rt
+    //if (cpu.getRegister(params.get(RS_FIELD)).getWriteSemaphore() > 0) {
+      //throw new RAWException();
+    //}
 
     String rs = cpu.getRegister(params.get(RS_FIELD)).getBinString();
     String zero = Converter.positiveIntToBin(64, 0);
@@ -61,23 +101,32 @@ public class BEQZ extends FlowControl_IType {
     String offset = bs.getBinString();
     boolean condition = rs.equals(zero);
 
-    if (condition) {
-      String pc_new = "";
+    if(cpu.getPredictingBranches())
+      cpu.updateSaturatingBranchPredictor(IF_PC_VALUE, condition);
+
+    if(PREDICTION == true) { // always predict true
+    if (!condition) {
       Register pc = cpu.getPC();
-      String pc_old = cpu.getPC().getBinString();
 
-      //subtracting 4 to the pc_old temporary variable using bitset64 safe methods
-      BitSet64 bs_temp = new BitSet64();
-      bs_temp.writeDoubleWord(-4);
-      pc_old = InstructionsUtils.twosComplementSum(pc_old, bs_temp.getBinString());
+      //updating program counter to branch fallthrough
+      pc.setBits(IF_PC_VALUE, 0);
 
-      //updating program counter
-      pc_new = InstructionsUtils.twosComplementSum(pc_old, offset);
+      throw new BranchMispredictionException();
+    }
+    } else if(PREDICTION == false) { // always predict false
+    if (condition) {
+      Register pc = cpu.getPC();
+      String pc_new = "";
+
+      //updating program counter to branch location
+      
+      pc_new = InstructionsUtils.twosComplementSum(IF_PC_VALUE, offset);
       pc.setBits(pc_new, 0);
-
-      throw new JumpException();
+      throw new BranchMispredictionException();
+    }
     }
   }
+
   public void pack() throws IrregularStringOfBitsException {
     repr.setBits(OPCODE_VALUE, OPCODE_VALUE_INIT);
     repr.setBits(Converter.intToBin(RS_FIELD_LENGTH, 0/*params.get(RS_FIELD)*/), RS_FIELD_INIT);

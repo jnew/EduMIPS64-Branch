@@ -45,7 +45,7 @@ public class B extends FlowControl_IType {
     name = "B";
   }
 
-  public void ID() throws RAWException, IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException {
+  public void EX() throws IrregularWriteOperationException, IrregularStringOfBitsException, JumpException, TwosComplementSumException {
     //getting registers rs and rt
     //converting offset into a signed binary value of 64 bits in length
     BitSet64 bs = new BitSet64();

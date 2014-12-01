@@ -1,0 +1,3 @@
+Jon's todos:
+1. UI setting for different prediction options
+2. UI stat firled for number of missed branch predictions

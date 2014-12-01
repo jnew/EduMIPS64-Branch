@@ -111,6 +111,9 @@ public class GUIConfig extends JDialog {
 
     addRow(panel, row++, "forwarding", new JCheckBox());
     addRow(panel, row++, "n_step", new JNumberField());
+    addRow(panel, row++, "branch_prediction", new JCheckBox());
+    addRow(panel, row++, "number_of_entries", new JNumberField());
+    addRow(panel, row++, "bits_per_entry", new JNumberField());
 
     // fill remaining vertical space
     grid_add(panel, new JPanel(), gbl, gbc, 0, 1, 0, row, GridBagConstraints.REMAINDER, 1);
@@ -397,6 +400,12 @@ public class GUIConfig extends JDialog {
 
             // Let's verify that we have to reset the CPU
             if (cpu.getStatus() == CPU.CPUStatus.RUNNING) {
+              logger.info("Reset");
+              org.edumips64.Main.resetSimulator(true);
+            }
+          } else { 
+             CPU cpu = CPU.getInstance();
+             if (cpu.getStatus() == CPU.CPUStatus.RUNNING) {
               logger.info("Reset");
               org.edumips64.Main.resetSimulator(true);
             }

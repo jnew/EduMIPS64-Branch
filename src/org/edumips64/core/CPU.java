@@ -55,9 +55,12 @@ public class CPU {
 
   /** Branch Predictor */
   public int[] saturating_predictor;
-  private int PREDICTOR_ENTRIES;
-  private int PREDICTOR_BITWIDTH;
+
+  private boolean PREDICTING_BRANCHES;
+  private int PREDICTOR_K, PREDICTOR_ENTRIES;
+  private int PREDICTOR_N;
   private int PREDICTOR_TRUE_THRESH, PREDICTOR_FALSE_THRESH;
+  private boolean ALREADY_JUMPED;
 
   /** CPU status.
    *  READY - the CPU has been initialized but the symbol table hasn't been
@@ -153,9 +156,14 @@ public class CPU {
     terminatingInstructionsOPCodes = conf.getTerminatingInstructions();
 
     //Branch Predictor init
-    PREDICTOR_ENTRIES = 4096;
-    PREDICTOR_BITWIDTH = 2;
+    if(config.getBoolean("branch_prediction")) {
+    PREDICTING_BRANCHES = true;
+    PREDICTOR_K = config.getInt("number_of_entries");
+    PREDICTOR_ENTRIES = (int) Math.pow(2, PREDICTOR_K);
+    PREDICTOR_N = config.getInt("bits_per_entry");
     saturating_predictor = new int[PREDICTOR_ENTRIES];
+    } else { PREDICTING_BRANCHES = false; }
+    ALREADY_JUMPED = false;
 
     logger.info("CPU Created.");
   }
@@ -405,23 +413,41 @@ public class CPU {
     return memoryStalls;
   }
 
+  public boolean getPredictingBranches() {
+    return PREDICTING_BRANCHES;
+  }
+
   public int getBranchMispredictionStalls() {
     return branchMispredictionStalls;
   }
 
-  public boolean getSaturatingBranchPrediction(int address) {
-   if(saturating_predictor[address] < (Math.pow(2, PREDICTOR_BITWIDTH)/2)) { // predict not taken
+  public boolean getSaturatingBranchPrediction(String address_str) {
+   int address = 0;
+   for(int i = 0; i < PREDICTOR_K; i++) {
+        if(address_str.charAt(i) == '1')
+          address += Math.pow(2, i);
+   }
+   if(saturating_predictor[address] < ((int)Math.pow(2, PREDICTOR_N)/2)) { // predict not taken
         return false;
    } else { // predict taken
         return true;
    }
   }
 
-  public void updateSaturatingBranchPredictor(int address, boolean branchTaken) {
-    if(branchTaken && (saturating_predictor[address] < (Math.pow(2, PREDICTOR_BITWIDTH)-1)))
+  public void updateSaturatingBranchPredictor(String address_str, boolean branchTaken) {
+    int address = 0;
+    for(int i = 0; i < PREDICTOR_K; i++) {
+        if(address_str.charAt(i) == '1')
+          address += Math.pow(2, i);
+    }
+    if(branchTaken && (saturating_predictor[address] < ((int)Math.pow(2, PREDICTOR_N)-1)))
       saturating_predictor[address]++;
     else if((!branchTaken) && (saturating_predictor[address] > 0))
       saturating_predictor[address]--;
+  }
+
+  public boolean getAlreadyJumped() {
+    return ALREADY_JUMPED;
   }
 
   /** This method performs a single pipeline step
@@ -675,6 +701,7 @@ public class CPU {
       // **** END OF THE BODY OF THE MAIN step() CODE
       // ********************************************
     } catch (JumpException ex) {
+      ALREADY_JUMPED = true;
       try {
         if (pipe.get(PipeStatus.IF) != null) {
           pipe.get(PipeStatus.IF).IF();
@@ -682,6 +709,7 @@ public class CPU {
       } catch (BreakException bex) {
         logger.info("Caught a BREAK after a Jump: ignoring it.");
       }
+      ALREADY_JUMPED = false;
 
       // A J-Type instruction has just modified the Program Counter. We need to
       // put in the IF state the instruction the PC points to
@@ -696,22 +724,16 @@ public class CPU {
       }
 
     } catch (BranchMispredictionException ex) {
-      try {
-        if (pipe.get(PipeStatus.IF) != null) {
-          pipe.get(PipeStatus.IF).IF();
-        }
-      } catch (BreakException bex) {
-        logger.info("Caught a BREAK after a Jump: ignoring it.");
-      }
 
       branchMispredictionStalls = branchMispredictionStalls + 2;
       logger.info("BranchMisprediction stalls incremented to " + RAWStalls);
 
       // A J-Type instruction has just modified the Program Counter. We need to
       // put in the IF state the instruction the PC points to
+      pipe.put(PipeStatus.MEM, pipe.get(PipeStatus.EX));    
       pipe.put(PipeStatus.IF, mem.getInstruction(pc));
-      pipe.put(PipeStatus.EX, Instruction.buildInstruction("BUBBLE"));
       pipe.put(PipeStatus.ID, Instruction.buildInstruction("BUBBLE"));
+      pipe.put(PipeStatus.EX, Instruction.buildInstruction("BUBBLE"));
       old_pc.writeDoubleWord((pc.getValue()));
       pc.writeDoubleWord((pc.getValue()) + 4);
 
@@ -790,6 +812,7 @@ public class CPU {
    */
   public void reset() {
     // Reset CPU state.
+    config = ConfigManager.getConfig();
     status = CPUStatus.READY;
     cycles = 0;
     instructions = 0;
@@ -812,8 +835,14 @@ public class CPU {
     }
 
     // Reset branch predictor
-    for(int i = 0; i < PREDICTOR_ENTRIES; i++)
-      saturating_predictor[i] = 0;
+    if(config.getBoolean("branch_prediction")) {
+    PREDICTING_BRANCHES = true;
+    PREDICTOR_K = config.getInt("number_of_entries");
+    PREDICTOR_ENTRIES = (int) Math.pow(2, PREDICTOR_K);
+    PREDICTOR_N = config.getInt("bits_per_entry");
+    saturating_predictor = new int[PREDICTOR_ENTRIES];
+    } else { PREDICTING_BRANCHES = false; }
+    ALREADY_JUMPED = false;
 
     try {
       // Reset the FCSR condition codes.
@@ -859,7 +888,7 @@ public class CPU {
     Dinero.getInstance().reset();
 
     logger.info("CPU Resetted");
-    config = ConfigManager.getConfig();
+    logger.info((PREDICTOR_K + " " + PREDICTOR_N));
   }
 
   /** Test method that returns a string containing the status of the pipeline.
