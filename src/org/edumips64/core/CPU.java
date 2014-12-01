@@ -54,7 +54,11 @@ public class CPU {
   public enum PipeStatus {IF, ID, EX, MEM, WB}
 
   /** Branch Predictor */
-  public int[] saturating_predictor_2bit;
+  public int[] saturating_predictor;
+  private boolean PREDICTING_BRANCHES;
+  private int PREDICTOR_K, PREDICTOR_ENTRIES;
+  private int PREDICTOR_N;
+  private int PREDICTOR_TRUE_THRESH, PREDICTOR_FALSE_THRESH;
 
   /** CPU status.
    *  READY - the CPU has been initialized but the symbol table hasn't been
@@ -150,7 +154,13 @@ public class CPU {
     terminatingInstructionsOPCodes = conf.getTerminatingInstructions();
 
     //Branch Predictor init
-    saturating_predictor_2bit = new int[4096];
+    if(config.getBoolean("branch_prediction")) {
+    PREDICTING_BRANCHES = true;
+    PREDICTOR_K = config.getInt("number_of_entries");
+    PREDICTOR_ENTRIES = (int) Math.pow(2, PREDICTOR_K);
+    PREDICTOR_N = config.getInt("bits_per_entry");
+    saturating_predictor = new int[PREDICTOR_ENTRIES];
+    } else { PREDICTING_BRANCHES = false; }
 
     logger.info("CPU Created.");
   }
@@ -400,23 +410,37 @@ public class CPU {
     return memoryStalls;
   }
 
+  public boolean getPredictingBranches() {
+    return PREDICTING_BRANCHES;
+  }
+
   public int getBranchMispredictionStalls() {
     return branchMispredictionStalls;
   }
 
-  public boolean getSaturatingBranchPrediction(int address) {
-   if(saturating_predictor_2bit[address] < 2) { // predict not taken
+  public boolean getSaturatingBranchPrediction(String address_str) {
+   int address = 0;
+   for(int i = 0; i < PREDICTOR_K; i++) {
+        if(address_str.charAt(i) == '1')
+          address += Math.pow(2, i);
+   }
+   if(saturating_predictor[address] < (Math.pow(2, PREDICTOR_N)/2)) { // predict not taken
         return false;
    } else { // predict taken
         return true;
    }
   }
 
-  public void updateSaturatingBranchPredictor(int address, boolean branchTaken) {
-    if(branchTaken && (saturating_predictor_2bit[address] < 3))
-      saturating_predictor_2bit[address]++;
-    else if((!branchTaken) && (saturating_predictor_2bit[address] > 0))
-      saturating_predictor_2bit[address]--;
+  public void updateSaturatingBranchPredictor(String address_str, boolean branchTaken) {
+    int address = 0;
+    for(int i = 0; i < PREDICTOR_K; i++) {
+        if(address_str.charAt(i) == '1')
+          address += Math.pow(2, i);
+    }
+    if(branchTaken && (saturating_predictor[address] < ((int)(Math.pow(2, PREDICTOR_N)-1))))
+      saturating_predictor[address]++;
+    else if((!branchTaken) && (saturating_predictor[address] > 0))
+      saturating_predictor[address]--;
   }
 
   /** This method performs a single pipeline step
@@ -700,6 +724,7 @@ public class CPU {
       }
 
       branchMispredictionStalls = branchMispredictionStalls + 2;
+      logger.info("BranchMisprediction stalls incremented to " + RAWStalls);
 
       // A J-Type instruction has just modified the Program Counter. We need to
       // put in the IF state the instruction the PC points to
@@ -806,8 +831,13 @@ public class CPU {
     }
 
     // Reset branch predictor
-    for(int i = 0; i < 4096; i++)
-      saturating_predictor_2bit[i] = 0;
+    if(config.getBoolean("branch_prediction")) {
+    PREDICTING_BRANCHES = true;
+    PREDICTOR_K = config.getInt("number_of_entries");
+    PREDICTOR_ENTRIES = (int) Math.pow(2, PREDICTOR_K);
+    PREDICTOR_N = config.getInt("bits_per_entry");
+    saturating_predictor = new int[PREDICTOR_ENTRIES];
+    } else { PREDICTING_BRANCHES = false; }
 
     try {
       // Reset the FCSR condition codes.

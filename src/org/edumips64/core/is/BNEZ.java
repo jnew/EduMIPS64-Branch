@@ -60,15 +60,8 @@ public class BNEZ extends FlowControl_IType {
     Register pc = cpu.getPC();
     IF_PC_VALUE = pc.getBinString();
 
-    if(PREDICTION_SCHEME == "Always True") {
-      PREDICTION = true;
-    } else if(PREDICTION_SCHEME == "2-Bit Saturating") { // need 12 least sig bits of PC
-      PREDICTOR_ADDRESS = 0;
-      for(int i = 0; i < 12; i++) {
-        if(IF_PC_VALUE.charAt(i) == '1')
-          PREDICTOR_ADDRESS += Math.pow(2, i);
-      }
-      PREDICTION = cpu.getSaturatingBranchPrediction(PREDICTOR_ADDRESS);
+    if(cpu.getPredictingBranches()) { // need 12 least sig bits of PC
+      PREDICTION = cpu.getSaturatingBranchPrediction(IF_PC_VALUE);
     } else { PREDICTION = false; }
 
     if(PREDICTION == true) {
@@ -108,8 +101,8 @@ public class BNEZ extends FlowControl_IType {
     String offset = bs.getBinString();
     boolean condition = ! rs.equals(zero);
 
-    if(PREDICTION_SCHEME == "2-Bit Saturating")
-      cpu.updateSaturatingBranchPredictor(PREDICTOR_ADDRESS, condition);
+    if(cpu.getPredictingBranches())
+      cpu.updateSaturatingBranchPredictor(IF_PC_VALUE, condition);
 
     if(PREDICTION == true) { // always predict true
     if (!condition) {

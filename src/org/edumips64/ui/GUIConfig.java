@@ -403,6 +403,12 @@ public class GUIConfig extends JDialog {
               logger.info("Reset");
               org.edumips64.Main.resetSimulator(true);
             }
+          } else { 
+             CPU cpu = CPU.getInstance();
+             if (cpu.getStatus() == CPU.CPUStatus.RUNNING) {
+              logger.info("Reset");
+              org.edumips64.Main.resetSimulator(true);
+            }
           }
 
           org.edumips64.Main.updateCGT();
