@@ -99,7 +99,7 @@ public class CPU {
   private static CPU cpu;
 
   /** Statistics */
-  private int cycles, instructions, RAWStalls, WAWStalls, dividerStalls, funcUnitStalls, memoryStalls, exStalls, branchMispredictionStalls;
+  private int cycles, instructions, RAWStalls, WAWStalls, dividerStalls, funcUnitStalls, memoryStalls, exStalls, branchMispredictionStalls, correctBranchPredictions;
 
   /** Static initializer */
   static {
@@ -421,11 +421,21 @@ public class CPU {
     return branchMispredictionStalls;
   }
 
+  public int getCorrectBranchPredictions() {
+    return correctBranchPredictions;
+  }
+
+  public void reportCorrectPrediction() {
+    correctBranchPredictions++;
+  }
+
   public boolean getSaturatingBranchPrediction(String address_str) {
    int address = 0;
    for(int i = 0; i < PREDICTOR_K; i++) {
-        if(address_str.charAt(i) == '1')
+        if(address_str.charAt(address_str.length() - ( i + 1 )) == '1') {
           address += Math.pow(2, i);
+        }
+        //logger.info("$$$$$$$$$$$$$$$$$$$$$$$$$$" + address_str + " " + address);
    }
    if(saturating_predictor[address] < ((int)Math.pow(2, PREDICTOR_N)/2)) { // predict not taken
         return false;
@@ -437,7 +447,7 @@ public class CPU {
   public void updateSaturatingBranchPredictor(String address_str, boolean branchTaken) {
     int address = 0;
     for(int i = 0; i < PREDICTOR_K; i++) {
-        if(address_str.charAt(i) == '1')
+        if(address_str.charAt(address_str.length() - ( i + 1 )) == '1')
           address += Math.pow(2, i);
     }
     if(branchTaken && (saturating_predictor[address] < ((int)Math.pow(2, PREDICTOR_N)-1)))
@@ -823,6 +833,7 @@ public class CPU {
     exStalls = 0;
     memoryStalls = 0;
     branchMispredictionStalls = 0;
+    correctBranchPredictions = 0;
 
     // Reset registers.
     for (int i = 0; i < 32; i++) {

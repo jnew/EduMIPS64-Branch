@@ -110,7 +110,7 @@ public class BNEZ extends FlowControl_IType {
       pc.setBits(IF_PC_VALUE, 0);
 
       throw new BranchMispredictionException();
-    }
+    } else { cpu.reportCorrectPrediction(); }
     } else if(PREDICTION == false) { // always predict false
     if (condition) {
       Register pc = cpu.getPC();
@@ -121,7 +121,7 @@ public class BNEZ extends FlowControl_IType {
       pc_new = InstructionsUtils.twosComplementSum(IF_PC_VALUE, offset);
       pc.setBits(pc_new, 0);
       throw new BranchMispredictionException();
-    }
+    } else { cpu.reportCorrectPrediction(); }
     }
   }
   public void pack() throws IrregularStringOfBitsException {
